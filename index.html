@@ -269,59 +269,7 @@
       border-color: var(--border-accent);
     }
 
-    /* Search Box Form Responsif & Anti-Potong */
-    .search-box {
-      display: flex;
-      gap: 8px;
-      width: 100%;
-      box-sizing: border-box;
-      background: var(--bg-subtle);
-      padding: 5px;
-      border-radius: 14px;
-      border: 1px solid var(--border-color);
-      margin-top: 4px;
-      transition: background-color 0.25s ease, border-color 0.25s ease;
-    }
 
-    .search-box input {
-      flex: 1;
-      min-width: 0;
-      background: transparent;
-      border: none;
-      outline: none;
-      padding: 10px 14px;
-      color: var(--input-color);
-      font-size: 0.95rem;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-
-    .search-box input::placeholder {
-      color: var(--text-dim);
-      font-weight: 400;
-    }
-
-    .search-box button {
-      flex-shrink: 0;
-      white-space: nowrap;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 0 16px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-    }
-
-    .search-box button:hover {
-      background: var(--primary-dark);
-      transform: translateY(-1px);
-    }
 
     /* Ticket Header Banner */
     .ticket-header {
@@ -782,39 +730,47 @@
     /* Empty / Not Found State */
     .empty-state {
       text-align: center;
-      padding: 40px 16px;
+      padding: 38px 16px 28px;
     }
 
     .empty-icon {
-      width: 60px;
-      height: 60px;
-      margin: 0 auto 16px;
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 18px;
       background: var(--warning-bg);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.25s ease;
+    }
+
+    .empty-icon.search-doc {
+      background: rgba(99, 102, 241, 0.12);
+      color: var(--primary-light);
+      border: 1px solid var(--border-accent);
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
     }
 
     .empty-icon svg {
-      width: 28px;
-      height: 28px;
-      fill: var(--warning);
+      width: 30px;
+      height: 30px;
     }
 
     .empty-state h3 {
-      font-size: 1.15rem;
-      font-weight: 700;
+      font-size: 1.22rem;
+      font-weight: 800;
       color: var(--heading-color);
-      margin-bottom: 6px;
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
       transition: color 0.25s ease;
     }
 
     .empty-state p {
-      font-size: 0.86rem;
+      font-size: 0.88rem;
       color: var(--text-muted);
-      line-height: 1.5;
-      margin-bottom: 20px;
+      line-height: 1.6;
+      margin-bottom: 22px;
       transition: color 0.25s ease;
     }
 
@@ -878,28 +834,27 @@
 
     <!-- Main Content Area -->
     <main id="content-area">
-      <!-- Tampilan Akses Terproteksi / Default Awal -->
-      <div class="card" id="protected-access-card">
+      <!-- Tampilan Default Notifikasi Ramah Saat Tautan Belum Dibuka / Tidak Sesuai -->
+      <div class="card" id="status-card">
         <div class="empty-state">
-          <div class="empty-icon" style="background: rgba(99, 102, 241, 0.12); color: var(--primary-light);">
-            <svg viewBox="0 0 24 24" style="fill: currentColor; width: 28px; height: 28px;"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+          <div class="empty-icon search-doc">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <circle cx="11" cy="14" r="3"></circle>
+              <line x1="13.2" y1="16.2" x2="16.5" y2="19.5"></line>
+            </svg>
           </div>
-          <h3>Akses Servis Terkunci</h3>
-          <!-- Ikon Pencarian / Dokumen (Pengganti Gembok) -->
-            <div style="font-size: 40px; margin-bottom: 12px;">🔍</div>
-
-              <!-- Judul Baru -->
-              <h3 style="margin-bottom: 8px; font-weight: 700;">Data Servis Tidak Ditemukan</h3>
-
-                <!-- Penjelasan Ramah & Solutif -->
-                <p style="color: #64748B; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
-                    Nomor tiket belum sesuai atau tautan tidak lengkap. Demi privasi data pelanggan, silakan buka tautan resmi yang kami kirim melalui WhatsApp atau scan kode QR pada nota fisik Anda.
-                </p>
-
-                <!-- Tombol Bantuan WA Toko (Opsional) -->
-                <a href="https://wa.me/62895375060666" target="_blank" style="display: inline-block; background-color: #25D366; color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;">
-                  Hubungi Admin Toko
-                </a>ari struk cetak atau pesan WhatsApp toko.</p>
+          <h3>Data Servis Tidak Ditemukan</h3>
+          <p>Nomor tiket belum sesuai atau tautan tidak lengkap. Demi privasi dan keamanan data pelanggan, silakan buka tautan resmi yang kami kirim melalui WhatsApp atau pindai (scan) kode QR pada nota fisik Anda.</p>
+          <div class="action-group">
+            <a id="initial-wa-btn" href="https://wa.me/6281234567890" target="_blank" class="btn btn-wa">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.8 14.19c-.24.68-1.2 1.25-1.68 1.31-.48.06-1.1.08-1.78-.14-.41-.13-.94-.3-1.63-.6-2.9-1.27-4.78-4.23-4.93-4.43-.14-.2-1.18-1.57-1.18-2.99 0-1.42.74-2.12 1-2.39.27-.27.59-.34.79-.34.2 0 .4 0 .57.01.19.01.44-.07.68.51.25.59.84 2.06.92 2.21.07.16.12.34.02.54-.1.2-.15.32-.3.5-.15.17-.32.39-.45.52-.15.15-.31.31-.13.62.18.31.78 1.29 1.68 2.09 1.15 1.03 2.13 1.35 2.43 1.5.31.15.48.13.66-.08.18-.2.77-.9 1-.1.2.19.23.4.15.6-.08.2-.4.81-1.08 1.49z"/>
+              </svg>
+              Hubungi Admin Toko
+            </a>
+          </div>
         </div>
       </div>
     </main>
@@ -924,6 +879,22 @@
     let currentSecurityKey = '';
     let realtimeChannel = null;
     let supabaseClient = null;
+
+    // Dapatkan Nomor WhatsApp Toko / Admin dari URL (?wa=... / ?admin=...) atau Fallback
+    function getStoreWhatsAppNumber() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramWa = urlParams.get('wa') || urlParams.get('admin') || urlParams.get('phone');
+        if (paramWa && paramWa.trim()) {
+          const digits = paramWa.replace(/\D/g, '');
+          if (digits.startsWith('08')) return '628' + digits.substring(2);
+          if (digits.startsWith('8')) return '62' + digits;
+          if (digits.startsWith('62')) return digits;
+          if (digits.length >= 7) return digits;
+        }
+      } catch (e) {}
+      return '6281234567890';
+    }
 
     // Hitung Kunci Rahasia Tautan (4 digit terakhir nomor HP pelanggan atau fallback 4 digit nomor tiket)
     function computeSecurityKey(ticket) {
@@ -1044,12 +1015,23 @@
         const ticketParam = urlParams.get('ticket');
         const keyParam = urlParams.get('key');
 
+        // Perbarui nomor WA tombol awal jika dibuka langsung tanpa tiket
+        const initialWaBtn = document.getElementById('initial-wa-btn');
+        if (initialWaBtn) {
+          const storeWa = getStoreWhatsAppNumber();
+          let waMsg = 'Halo Admin Toko, saya ingin menanyakan status servis perangkat saya karena tautan pelacakan tidak dapat dibuka.';
+          if (ticketParam && ticketParam.trim()) {
+            waMsg = `Halo Admin Toko, saya ingin menanyakan status servis dengan nomor tiket #${ticketParam.trim()}, namun data tidak ditemukan atau tautan belum sesuai.`;
+          }
+          initialWaBtn.href = `https://wa.me/${storeWa}?text=${encodeURIComponent(waMsg)}`;
+        }
+
         if (ticketParam && ticketParam.trim() && keyParam && keyParam.trim()) {
           const cleanTicket = ticketParam.trim();
           const cleanKey = keyParam.trim();
           fetchTicketData(cleanTicket, cleanKey);
         } else {
-          // Jika URL dibuka tanpa tiket atau tanpa key, langsung tampilkan proteksi ramah
+          // Jika URL dibuka tanpa tiket atau tanpa key, langsung tampilkan notifikasi ramah
           renderUnauthorizedOrNotFound();
         }
       } catch (err) {
@@ -1068,14 +1050,37 @@
     // Tampilan Ramah Jika Akses Tidak Valid atau Data Servis Tidak Ditemukan
     function renderUnauthorizedOrNotFound() {
       const main = document.getElementById('content-area');
+      const storeWa = getStoreWhatsAppNumber();
+      const urlParams = new URLSearchParams(window.location.search);
+      const ticketParam = (urlParams.get('ticket') || '').trim();
+
+      let waMsg = 'Halo Admin Toko, saya ingin menanyakan status servis perangkat saya karena tautan pelacakan tidak dapat dibuka.';
+      if (ticketParam) {
+        waMsg = `Halo Admin Toko, saya ingin menanyakan status servis dengan nomor tiket #${ticketParam}, namun data tidak ditemukan atau tautan belum sesuai.`;
+      }
+      const waLink = `https://wa.me/${storeWa}?text=${encodeURIComponent(waMsg)}`;
+
       main.innerHTML = `
         <div class="card">
           <div class="empty-state">
-            <div class="empty-icon" style="background: rgba(99, 102, 241, 0.12); color: var(--primary-light);">
-              <svg viewBox="0 0 24 24" style="fill: currentColor; width: 28px; height: 28px;"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            <div class="empty-icon search-doc">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <circle cx="11" cy="14" r="3"></circle>
+                <line x1="13.2" y1="16.2" x2="16.5" y2="19.5"></line>
+              </svg>
             </div>
-            <h3>Akses Servis Terkunci</h3>
-            <p>Data servis tidak ditemukan. Pastikan Anda mengakses tautan resmi dari struk cetak atau pesan WhatsApp toko.</p>
+            <h3>Data Servis Tidak Ditemukan</h3>
+            <p>Nomor tiket belum sesuai atau tautan tidak lengkap. Demi privasi dan keamanan data pelanggan, silakan buka tautan resmi yang kami kirim melalui WhatsApp atau pindai (scan) kode QR pada nota fisik Anda.</p>
+            <div class="action-group">
+              <a href="${waLink}" target="_blank" class="btn btn-wa">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.8 14.19c-.24.68-1.2 1.25-1.68 1.31-.48.06-1.1.08-1.78-.14-.41-.13-.94-.3-1.63-.6-2.9-1.27-4.78-4.23-4.93-4.43-.14-.2-1.18-1.57-1.18-2.99 0-1.42.74-2.12 1-2.39.27-.27.59-.34.79-.34.2 0 .4 0 .57.01.19.01.44-.07.68.51.25.59.84 2.06.92 2.21.07.16.12.34.02.54-.1.2-.15.32-.3.5-.15.17-.32.39-.45.52-.15.15-.31.31-.13.62.18.31.78 1.29 1.68 2.09 1.15 1.03 2.13 1.35 2.43 1.5.31.15.48.13.66-.08.18-.2.77-.9 1-.1.2.19.23.4.15.6-.08.2-.4.81-1.08 1.49z"/>
+                </svg>
+                Hubungi Admin Toko
+              </a>
+            </div>
           </div>
         </div>
       `;
@@ -1255,9 +1260,9 @@
       }
 
       // WhatsApp Store Contact
-      const defaultStoreWa = '6281234567890';
+      const storeWa = getStoreWhatsAppNumber();
       const waMsg = encodeURIComponent(`Halo Admin HF Cell, saya ingin menanyakan progres tiket #${ticket.ticket_number} (${deviceName} - ${customerName}).`);
-      const waLink = `https://wa.me/${defaultStoreWa}?text=${waMsg}`;
+      const waLink = `https://wa.me/${storeWa}?text=${waMsg}`;
 
       let html = `
         <div class="card">
