@@ -11,8 +11,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Supabase JS Client v2 CDN -->
+  <!-- Supabase JS Client v2 CDN with Fallback -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    if (typeof window.supabase === 'undefined') {
+      document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');
+    }
+  </script>
 
   <style>
     :root {
@@ -754,11 +759,14 @@
 
     <!-- Main Content Area -->
     <main id="content-area">
-      <!-- Loading State Default -->
-      <div class="card">
-        <div class="spinner-wrap">
-          <div class="spinner"></div>
-          <p style="font-size: 0.88rem; color: var(--text-muted);">Menghubungkan ke sistem Supabase...</p>
+      <!-- Tampilan Awal: Petunjuk Pencarian Tiket (Langsung Tampil Tanpa Loading Spinner) -->
+      <div class="card" id="initial-search-prompt">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          </div>
+          <h3>Masukkan Nomor Tiket Servis</h3>
+          <p>Ketik nomor tiket servis Anda pada kolom di atas atau pindai QR Code yang tertera pada nota fisik thermal untuk melihat status perbaikan dan garansi secara langsung.</p>
         </div>
       </div>
     </main>
@@ -779,42 +787,80 @@
     const SUPABASE_URL = 'https://ombcjdtbfbyrgnpijosr.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_9J4BxCLzc4H2iJdRPT_eUw_3UNmrIMQ';
 
-    // Inisialisasi Supabase Client via CDN
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
     let currentTicketNumber = '';
     let realtimeChannel = null;
+    let supabaseClient = null;
 
-    document.getElementById('current-year').textContent = new Date().getFullYear();
+    // Inisialisasi Supabase Client Secara Aman dengan Retry Jaringan
+    async function getSupabaseClient(maxRetries = 15, delayMs = 200) {
+      if (supabaseClient) return supabaseClient;
 
-    // Jalankan saat dokumen dimuat
-    document.addEventListener('DOMContentLoaded', () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const ticketParam = urlParams.get('ticket');
+      for (let i = 0; i < maxRetries; i++) {
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+          try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            return supabaseClient;
+          } catch (e) {
+            console.error('[SUPABASE INIT ERROR]', e);
+            throw new Error('Gagal menginisialisasi pustaka Supabase: ' + (e.message || e));
+          }
+        }
+        await new Promise(res => setTimeout(res, delayMs));
+      }
 
-      if (ticketParam && ticketParam.trim()) {
-        const cleanTicket = ticketParam.trim();
-        document.getElementById('ticket-input').value = cleanTicket;
-        fetchTicketData(cleanTicket);
-      } else {
+      throw new Error('Pustaka Supabase client belum berhasil dimuat dari jaringan. Mohon periksa koneksi internet Anda atau muat ulang halaman.');
+    }
+
+    // Inisialisasi Aplikasi Saat Halaman Dibuka
+    function initApp() {
+      try {
+        const yearEl = document.getElementById('current-year');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketParam = urlParams.get('ticket');
+
+        if (ticketParam && ticketParam.trim()) {
+          const cleanTicket = ticketParam.trim();
+          const input = document.getElementById('ticket-input');
+          if (input) input.value = cleanTicket;
+          fetchTicketData(cleanTicket);
+        } else {
+          // Jika URL dibuka tanpa parameter tiket, pastikan langsung tampilkan form pencarian tanpa spinner
+          renderSearchPrompt();
+        }
+      } catch (err) {
+        console.error('[INIT APP ERROR]', err);
         renderSearchPrompt();
       }
-    });
+    }
+
+    // Jalankan segera: jika DOM sudah siap langsung init, jika belum pasang listener
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
 
     // Handle pencarian manual
     function handleManualSearch(e) {
       if (e) e.preventDefault();
       const input = document.getElementById('ticket-input');
-      const val = input.value.trim();
+      const val = input ? input.value.trim() : '';
       if (!val) {
         showToast('Silakan masukkan nomor tiket servis.');
+        if (input) input.focus();
         return;
       }
 
       // Update URL query string tanpa reload halaman
-      const newUrl = new URL(window.location);
-      newUrl.searchParams.set('ticket', val);
-      window.history.pushState({}, '', newUrl);
+      try {
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('ticket', val);
+        window.history.pushState({}, '', newUrl);
+      } catch (err) {
+        console.warn('History pushState error:', err);
+      }
 
       fetchTicketData(val);
     }
@@ -828,8 +874,8 @@
             <div class="empty-icon">
               <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
             </div>
-            <h3>Masukkan Nomor Tiket</h3>
-            <p>Ketik nomor tiket servis atau pindai QR Code yang tertera pada nota fisik thermal Anda untuk melihat status pengerjaan unit secara langsung.</p>
+            <h3>Masukkan Nomor Tiket Servis</h3>
+            <p>Ketik nomor tiket servis Anda pada kolom di atas atau pindai QR Code yang tertera pada nota fisik thermal Anda untuk melihat status pengerjaan unit secara langsung.</p>
           </div>
         </div>
       `;
@@ -882,58 +928,81 @@
 
     // Ambil Data Tiket dari Supabase
     async function fetchTicketData(ticketNo) {
-      currentTicketNumber = ticketNo;
+      if (!ticketNo || !ticketNo.trim()) {
+        renderSearchPrompt();
+        return;
+      }
+
+      const cleanTicket = ticketNo.trim();
+      currentTicketNumber = cleanTicket;
+      const input = document.getElementById('ticket-input');
+      if (input) input.value = cleanTicket;
+
       renderLoading();
 
       try {
-        const { data, error } = await supabase
+        const client = await getSupabaseClient();
+
+        // Cari berdasarkan nomor tiket (case-insensitive via ilike)
+        const { data, error } = await client
           .from('service_tickets')
           .select('*')
-          .eq('ticket_number', ticketNo)
+          .ilike('ticket_number', cleanTicket)
           .maybeSingle();
 
         if (error) {
           console.error('[SUPABASE QUERY ERROR]', error);
-          renderError(`Terjadi kendala saat membaca data: ${error.message}`);
+          if (error.code === '42501' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            renderError('Akses database dibatasi oleh izin RLS Supabase. Pastikan tabel "service_tickets" telah diizinkan SELECT untuk publik via Anon Key di SQL Editor.', true);
+          } else {
+            renderError(`Terjadi kendala saat membaca data: ${error.message || 'Kesalahan sistem database.'}`, true);
+          }
           return;
         }
 
         if (!data) {
-          renderNotFound(ticketNo);
+          renderNotFound(cleanTicket);
           return;
         }
 
         renderTicketDetail(data);
-        setupRealtimeListener(ticketNo);
+        setupRealtimeListener(cleanTicket);
       } catch (err) {
         console.error('[FETCH ERROR]', err);
-        renderError('Gagal terhubung ke server. Pastikan koneksi internet Anda aktif.');
+        renderError(err.message || 'Gagal terhubung ke server cloud. Pastikan koneksi internet Anda aktif dan coba lagi.', true);
       }
     }
 
     // Pasang Realtime Listener untuk Update Live
-    function setupRealtimeListener(ticketNo) {
-      if (realtimeChannel) {
-        supabase.removeChannel(realtimeChannel);
-      }
+    async function setupRealtimeListener(ticketNo) {
+      try {
+        const client = await getSupabaseClient();
+        if (!client) return;
 
-      realtimeChannel = supabase
-        .channel(`ticket-live-${ticketNo}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'service_tickets',
-            filter: `ticket_number=eq.${ticketNo}`
-          },
-          (payload) => {
-            console.log('⚡ [REALTIME UPDATE DITERIMA]', payload.new);
-            showToast('Data servis baru saja diperbarui oleh teknisi!');
-            renderTicketDetail(payload.new);
-          }
-        )
-        .subscribe();
+        if (realtimeChannel) {
+          client.removeChannel(realtimeChannel);
+        }
+
+        realtimeChannel = client
+          .channel(`ticket-live-${ticketNo}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'service_tickets',
+              filter: `ticket_number=eq.${ticketNo}`
+            },
+            (payload) => {
+              console.log('⚡ [REALTIME UPDATE DITERIMA]', payload.new);
+              showToast('Data servis baru saja diperbarui oleh teknisi!');
+              renderTicketDetail(payload.new);
+            }
+          )
+          .subscribe();
+      } catch (e) {
+        console.warn('Realtime channel warning:', e);
+      }
     }
 
     // Render Tampilan Utama Detail Tiket
@@ -1200,20 +1269,27 @@
       `;
     }
 
-    // Tampilan Error Koneksi
-    function renderError(msg) {
+    // Tampilan Error Koneksi & Izin
+    function renderError(msg, canRetry = true) {
       const main = document.getElementById('content-area');
+      const hasTicket = currentTicketNumber && currentTicketNumber.trim().length > 0;
       main.innerHTML = `
         <div class="card">
           <div class="empty-state">
             <div class="empty-icon" style="background:var(--danger-bg);">
               <svg viewBox="0 0 24 24" style="fill:var(--danger);"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
             </div>
-            <h3>Koneksi Terputus</h3>
+            <h3>Kendala Membaca Data</h3>
             <p>${msg}</p>
             <div class="action-group">
-              <button onclick="fetchTicketData(currentTicketNumber)" class="btn btn-refresh">
-                Coba Lagi
+              ${canRetry && hasTicket ? `
+                <button onclick="fetchTicketData('${currentTicketNumber}')" class="btn btn-refresh">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                  Coba Lagi
+                </button>
+              ` : ''}
+              <button onclick="renderSearchPrompt()" class="btn btn-wa" style="background:var(--bg-subtle);color:var(--text-main);border:1px solid var(--border-color);">
+                Kembali ke Pencarian
               </button>
             </div>
           </div>
