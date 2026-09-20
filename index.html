@@ -876,29 +876,16 @@
       <p class="subtitle">Lacak progres servis HP & masa garansi secara realtime</p>
     </header>
 
-    <!-- Search Form (Bisa dipakai jika user datang tanpa ?ticket=) -->
-    <div class="card" id="search-card" style="padding: 14px 16px;">
-      <form id="search-form" onsubmit="handleManualSearch(event)">
-        <div class="search-box">
-          <input type="text" id="ticket-input" placeholder="Masukkan No. Tiket (misal: SRV-2026-0001)" autocomplete="off">
-          <button type="submit">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            Lacak
-          </button>
-        </div>
-      </form>
-    </div>
-
     <!-- Main Content Area -->
     <main id="content-area">
-      <!-- Tampilan Awal: Petunjuk Pencarian Tiket (Langsung Tampil Tanpa Loading Spinner) -->
-      <div class="card" id="initial-search-prompt">
+      <!-- Tampilan Akses Terproteksi / Default Awal -->
+      <div class="card" id="protected-access-card">
         <div class="empty-state">
-          <div class="empty-icon">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <div class="empty-icon" style="background: rgba(99, 102, 241, 0.12); color: var(--primary-light);">
+            <svg viewBox="0 0 24 24" style="fill: currentColor; width: 28px; height: 28px;"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
           </div>
-          <h3>Masukkan Nomor Tiket Servis</h3>
-          <p>Ketik nomor tiket servis Anda pada kolom di atas atau pindai QR Code yang tertera pada nota fisik thermal untuk melihat status perbaikan dan garansi secara langsung.</p>
+          <h3>Akses Servis Terkunci</h3>
+          <p>Data servis tidak ditemukan. Pastikan Anda mengakses tautan resmi dari struk cetak atau pesan WhatsApp toko.</p>
         </div>
       </div>
     </main>
@@ -920,8 +907,23 @@
     const SUPABASE_ANON_KEY = 'sb_publishable_9J4BxCLzc4H2iJdRPT_eUw_3UNmrIMQ';
 
     let currentTicketNumber = '';
+    let currentSecurityKey = '';
     let realtimeChannel = null;
     let supabaseClient = null;
+
+    // Hitung Kunci Rahasia Tautan (4 digit terakhir nomor HP pelanggan atau fallback 4 digit nomor tiket)
+    function computeSecurityKey(ticket) {
+      if (!ticket) return '';
+      const phone = (ticket.customer_phone || '').toString().replace(/\D/g, '');
+      if (phone.length >= 4) {
+        return phone.slice(-4);
+      }
+      const cleanTicket = (ticket.ticket_number || '').toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      if (cleanTicket.length >= 4) {
+        return cleanTicket.slice(-4);
+      }
+      return cleanTicket.padStart(4, '0');
+    }
 
     // Inisialisasi Supabase Client Secara Aman dengan Retry Jaringan
     async function getSupabaseClient(maxRetries = 15, delayMs = 200) {
@@ -1026,19 +1028,19 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const ticketParam = urlParams.get('ticket');
+        const keyParam = urlParams.get('key');
 
-        if (ticketParam && ticketParam.trim()) {
+        if (ticketParam && ticketParam.trim() && keyParam && keyParam.trim()) {
           const cleanTicket = ticketParam.trim();
-          const input = document.getElementById('ticket-input');
-          if (input) input.value = cleanTicket;
-          fetchTicketData(cleanTicket);
+          const cleanKey = keyParam.trim();
+          fetchTicketData(cleanTicket, cleanKey);
         } else {
-          // Jika URL dibuka tanpa parameter tiket, pastikan langsung tampilkan form pencarian tanpa spinner
-          renderSearchPrompt();
+          // Jika URL dibuka tanpa tiket atau tanpa key, langsung tampilkan proteksi ramah
+          renderUnauthorizedOrNotFound();
         }
       } catch (err) {
         console.error('[INIT APP ERROR]', err);
-        renderSearchPrompt();
+        renderUnauthorizedOrNotFound();
       }
     }
 
@@ -1049,40 +1051,17 @@
       initApp();
     }
 
-    // Handle pencarian manual
-    function handleManualSearch(e) {
-      if (e) e.preventDefault();
-      const input = document.getElementById('ticket-input');
-      const val = input ? input.value.trim() : '';
-      if (!val) {
-        showToast('Silakan masukkan nomor tiket servis.');
-        if (input) input.focus();
-        return;
-      }
-
-      // Update URL query string tanpa reload halaman
-      try {
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.set('ticket', val);
-        window.history.pushState({}, '', newUrl);
-      } catch (err) {
-        console.warn('History pushState error:', err);
-      }
-
-      fetchTicketData(val);
-    }
-
-    // Tampilan awal jika belum ada parameter ?ticket=
-    function renderSearchPrompt() {
+    // Tampilan Ramah Jika Akses Tidak Valid atau Data Servis Tidak Ditemukan
+    function renderUnauthorizedOrNotFound() {
       const main = document.getElementById('content-area');
       main.innerHTML = `
         <div class="card">
           <div class="empty-state">
-            <div class="empty-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            <div class="empty-icon" style="background: rgba(99, 102, 241, 0.12); color: var(--primary-light);">
+              <svg viewBox="0 0 24 24" style="fill: currentColor; width: 28px; height: 28px;"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
             </div>
-            <h3>Masukkan Nomor Tiket Servis</h3>
-            <p>Ketik nomor tiket servis Anda pada kolom di atas atau pindai QR Code yang tertera pada nota fisik thermal Anda untuk melihat status pengerjaan unit secara langsung.</p>
+            <h3>Akses Servis Terkunci</h3>
+            <p>Data servis tidak ditemukan. Pastikan Anda mengakses tautan resmi dari struk cetak atau pesan WhatsApp toko.</p>
           </div>
         </div>
       `;
@@ -1133,17 +1112,17 @@
       });
     }
 
-    // Ambil Data Tiket dari Supabase
-    async function fetchTicketData(ticketNo) {
-      if (!ticketNo || !ticketNo.trim()) {
-        renderSearchPrompt();
+    // Ambil Data Tiket dari Supabase & Validasi Security Key
+    async function fetchTicketData(ticketNo, securityKey) {
+      if (!ticketNo || !ticketNo.trim() || !securityKey || !securityKey.trim()) {
+        renderUnauthorizedOrNotFound();
         return;
       }
 
       const cleanTicket = ticketNo.trim();
+      const cleanKey = securityKey.trim();
       currentTicketNumber = cleanTicket;
-      const input = document.getElementById('ticket-input');
-      if (input) input.value = cleanTicket;
+      currentSecurityKey = cleanKey;
 
       renderLoading();
 
@@ -1168,12 +1147,20 @@
         }
 
         if (!data) {
-          renderNotFound(cleanTicket);
+          renderUnauthorizedOrNotFound();
+          return;
+        }
+
+        // Cocokkan nilai key tersebut dengan data di Supabase
+        const expectedKey = computeSecurityKey(data);
+        if (cleanKey.toLowerCase() !== expectedKey.toLowerCase()) {
+          console.warn('[SECURITY] Key mismatch for ticket:', cleanTicket);
+          renderUnauthorizedOrNotFound();
           return;
         }
 
         renderTicketDetail(data);
-        setupRealtimeListener(cleanTicket);
+        setupRealtimeListener(cleanTicket, cleanKey);
       } catch (err) {
         console.error('[FETCH ERROR]', err);
         renderError(err.message || 'Gagal terhubung ke server cloud. Pastikan koneksi internet Anda aktif dan coba lagi.', true);
@@ -1181,7 +1168,7 @@
     }
 
     // Pasang Realtime Listener untuk Update Live
-    async function setupRealtimeListener(ticketNo) {
+    async function setupRealtimeListener(ticketNo, securityKey) {
       try {
         const client = await getSupabaseClient();
         if (!client) return;
@@ -1202,8 +1189,13 @@
             },
             (payload) => {
               console.log('⚡ [REALTIME UPDATE DITERIMA]', payload.new);
-              showToast('Data servis baru saja diperbarui oleh teknisi!');
-              renderTicketDetail(payload.new);
+              if (payload.new) {
+                const expectedKey = computeSecurityKey(payload.new);
+                if (securityKey && securityKey.trim().toLowerCase() === expectedKey.toLowerCase()) {
+                  showToast('Data servis baru saja diperbarui oleh teknisi!');
+                  renderTicketDetail(payload.new);
+                }
+              }
             }
           )
           .subscribe();
@@ -1444,7 +1436,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.8 14.19c-.24.68-1.2 1.25-1.68 1.31-.48.06-1.1.08-1.78-.14-.41-.13-.94-.3-1.63-.6-2.9-1.27-4.78-4.23-4.93-4.43-.14-.2-1.18-1.57-1.18-2.99 0-1.42.74-2.12 1-2.39.27-.27.59-.34.79-.34.2 0 .4 0 .57.01.19.01.44-.07.68.51.25.59.84 2.06.92 2.21.07.16.12.34.02.54-.1.2-.15.32-.3.5-.15.17-.32.39-.45.52-.15.15-.31.31-.13.62.18.31.78 1.29 1.68 2.09 1.15 1.03 2.13 1.35 2.43 1.5.31.15.48.13.66-.08.18-.2.77-.9 1-.1.2.19.23.4.15.6-.08.2-.4.81-1.08 1.49z"/></svg>
               Chat WhatsApp Toko
             </a>
-            <button onclick="fetchTicketData('${ticket.ticket_number}')" class="btn btn-refresh">
+            <button onclick="fetchTicketData('${ticket.ticket_number}', currentSecurityKey)" class="btn btn-refresh">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
               Perbarui Status (Refresh)
             </button>
@@ -1455,31 +1447,11 @@
       main.innerHTML = html;
     }
 
-    // Tampilan Jika Tiket Tidak Ditemukan
-    function renderNotFound(ticketNo) {
-      const main = document.getElementById('content-area');
-      main.innerHTML = `
-        <div class="card">
-          <div class="empty-state">
-            <div class="empty-icon">
-              <svg viewBox="0 0 24 24"><path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/></svg>
-            </div>
-            <h3>Tiket Tidak Ditemukan</h3>
-            <p>Nomor tiket <strong>#${ticketNo}</strong> tidak ditemukan pada database servis cloud kami. Mohon pastikan nomor tiket sudah benar atau periksa kembali nota Anda.</p>
-            <div class="action-group">
-              <button onclick="document.getElementById('ticket-input').focus()" class="btn btn-refresh">
-                Cari Nomor Tiket Lain
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
     // Tampilan Error Koneksi & Izin
     function renderError(msg, canRetry = true) {
       const main = document.getElementById('content-area');
       const hasTicket = currentTicketNumber && currentTicketNumber.trim().length > 0;
+      const hasKey = currentSecurityKey && currentSecurityKey.trim().length > 0;
       main.innerHTML = `
         <div class="card">
           <div class="empty-state">
@@ -1489,15 +1461,12 @@
             <h3>Kendala Membaca Data</h3>
             <p>${msg}</p>
             <div class="action-group">
-              ${canRetry && hasTicket ? `
-                <button onclick="fetchTicketData('${currentTicketNumber}')" class="btn btn-refresh">
+              ${canRetry && hasTicket && hasKey ? `
+                <button onclick="fetchTicketData(currentTicketNumber, currentSecurityKey)" class="btn btn-refresh">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
                   Coba Lagi
                 </button>
               ` : ''}
-              <button onclick="renderSearchPrompt()" class="btn btn-wa" style="background:var(--bg-subtle);color:var(--text-main);border:1px solid var(--border-color);">
-                Kembali ke Pencarian
-              </button>
             </div>
           </div>
         </div>
