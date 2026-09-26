@@ -898,17 +898,23 @@
 
     // Hitung Kunci Rahasia Tautan (4 digit terakhir nomor HP pelanggan atau fallback 4 digit nomor tiket)
     function computeSecurityKey(ticket) {
-      if (!ticket) return '';
-      const phone = (ticket.customer_phone || '').toString().replace(/\D/g, '');
-      if (phone.length >= 4) {
-        return phone.slice(-4);
+        if (!ticket) return '';
+        // 1. Jika di database tersimpan kunci acak (security_key), gunakan itu
+       if (ticket.security_key && ticket.security_key.toString().trim() !== '') {
+            return ticket.security_key.toString().trim().toUpperCase();
       }
-      const cleanTicket = (ticket.ticket_number || '').toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-      if (cleanTicket.length >= 4) {
+        // 2. Fallback jika tiket lama: 4 digit terakhir nomor HP
+        const phone = (ticket.customer_phone || '').toString().replace(/\D/g, '');
+        if (phone.length >= 4) {
+            return phone.slice(-4);
+       }
+        // 3. Fallback terakhir: 4 digit nomor tiket
+        const cleanTicket = (ticket.ticket_number || '').toString().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        if (cleanTicket.length >= 4) {
         return cleanTicket.slice(-4);
       }
-      return cleanTicket.padStart(4, '0');
-    }
+        return cleanTicket.padStart(4, '0');
+      }
 
     // Inisialisasi Supabase Client Secara Aman dengan Retry Jaringan
     async function getSupabaseClient(maxRetries = 15, delayMs = 200) {
